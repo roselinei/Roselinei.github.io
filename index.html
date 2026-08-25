@@ -167,7 +167,23 @@
     .pad-with { padding-left: 1px; }
 
     .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
-  </style>
+     /* Holodex Credit 標示 */
+    .credit-tag {
+      position: fixed;
+      bottom: max(env(safe-area-inset-bottom), 10px);
+      right: 15px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+      pointer-events: none; /* 讓點擊穿透，不阻擋滑動 */
+    }
+    .credit-tag a {
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      pointer-events: auto; /* 讓超連結可以被點擊 */
+    }
+
+   </style>
 </head>
 <body>
   <div id="loading" class="loading">正在向 API 獲取 8 軌河道...</div>
