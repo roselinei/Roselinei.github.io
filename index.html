@@ -11,6 +11,7 @@
     :root {
       --bg-color: #2A4B71;
       --card-w: 260px; 
+      /* 高度扣除額增加到 60px，為頂部時間和底部時間讓出空間，同時稍微壓縮八軌讓它們順著往下 */
       --lane-h: calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 60px) / 8); 
       --accent: #70a1ff;
       --time-color: #d1d8e0;
@@ -44,6 +45,7 @@
       font-size: 0.95rem; font-weight: bold;
       letter-spacing: 1px; 
       position: sticky; 
+      /* 直接貼齊瀏海下緣，不加額外的 px */
       top: env(safe-area-inset-top); 
       left: 0;
       width: fit-content; z-index: 100;
@@ -71,22 +73,25 @@
       box-shadow: none; 
     }
 
+    /* 時間標示共用設定 */
     .hour-text {
       position: absolute; 
       left: 0; 
       transform: translateX(-50%);
       font-size: 11px; color: rgba(255,255,255,0.4);
       white-space: nowrap;
-      line-height: 1; 
+      line-height: 1; /* 確保沒有額外行高影響貼齊 */
     }
 
+    /* 頂部時間標示 */
     .hour-text.top {
-      top: calc(env(safe-area-inset-top) + 12px); 
+      /* 與左側日期的文字高度抓個水平對齊基準 */
+      top: calc(env(safe-area-inset-top) + 8px); 
     }
 
-    /* 改良：直接給予 24px 的底邊距，確保在 iPad 上也夠高 */
+    /* 底部時間標示 */
     .hour-text.bottom {
-      bottom: max(env(safe-area-inset-bottom) + 12px, 24px);
+      bottom: calc(env(safe-area-inset-bottom) + 8px);
     }
 
 
@@ -162,7 +167,7 @@
     .pad-with { padding-left: 1px; }
 
     .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
-    
+     /* Holodex Credit 標示 */
     .credit-tag {
       position: fixed;
       bottom: max(env(safe-area-inset-bottom), 10px);
@@ -170,24 +175,28 @@
       font-size: 10px;
       color: rgba(255, 255, 255, 0.5);
       z-index: 100;
-      pointer-events: none; 
+      pointer-events: none; /* 讓點擊穿透，不阻擋滑動 */
     }
     .credit-tag a {
       color: rgba(255, 255, 255, 0.7);
       text-decoration: none;
-      pointer-events: auto; 
+      pointer-events: auto; /* 讓超連結可以被點擊 */
     }
 
    </style>
 </head>
 <body>
   <div id="loading" class="loading">正在向 API 獲取 8 軌河道...</div>
-  <!-- 已經移除了重複的 viewport 區塊 -->
+  <div id="viewport">
+    <div id="timeline-content"></div>
+  </div>
   <div id="viewport">
     <div id="timeline-content"></div>
   </div>
 
+  <!-- 把下面這行貼在這裡 -->
   <div class="credit-tag">Powered by <a href="https://holodex.net/" target="_blank">Holodex</a></div>
+
 
   <script>
     const API_URL = 'https://fragrant-violet-32a4.neiforscience.workers.dev/';
@@ -252,6 +261,7 @@
             box.classList.add('expanded');
         }
 
+        // 修改：同時插入上下兩組時間標籤
         box.innerHTML = `
           <span class="hour-text top">${new Date(startHour + i*3600000).getHours()}:00</span>
           <span class="hour-text bottom">${new Date(startHour + i*3600000).getHours()}:00</span>
@@ -262,6 +272,7 @@
       const lastLine = document.createElement('div');
       lastLine.className = 'hour-box';
       lastLine.style.left = hourX[totalHours] + 'px';
+      // 修改：最後一條線也同時插入上下兩組時間標籤
       lastLine.innerHTML = `
         <span class="hour-text top">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
         <span class="hour-text bottom">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
@@ -314,6 +325,7 @@
         card.href = item.link;
         card.className = cardClass;
         card.style.left = targetX + 'px';
+        /* 卡片起點往下推至 45px，確保頂部時間有足夠的留白，並讓八軌順勢下移 */
         card.style.top = `calc(${finalLane} * var(--lane-h) + env(safe-area-inset-top) + 45px)`; 
 
         card.innerHTML = `
