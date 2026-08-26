@@ -270,7 +270,7 @@
           let bestLane = 0;
 
           for(let j=0; j<8; j++) {
-            if (targetX >= simLaneEnds[j]) {
+            if (targetX > simLaneEnds[j]) {
               finalLane = j;
               break;
             }
@@ -363,7 +363,7 @@
         let bestLane = 0;
 
         for(let j=0; j<8; j++) {
-          if (targetX >= laneLastEnds[j]) {
+          if (targetX > laneLastEnds[j]) {
             finalLane = j;
             break;
           }
