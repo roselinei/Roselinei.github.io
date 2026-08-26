@@ -234,6 +234,7 @@
         container.innerHTML = '<div style="padding: 20px;">目前沒有直播預定</div>';
         return;
       }
+      data.sort((a, b) => a.startTime - b.startTime);
 
       const hourPx = 280; 
       const startHour = new Date(data[0].startTime).setMinutes(0,0,0);
