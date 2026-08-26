@@ -91,9 +91,9 @@
 
     /* 底部時間標示 */
     .hour-text.bottom {
-      /* 絕對貼齊框線最下緣 */
-      bottom: 0; 
+      bottom: calc(env(safe-area-inset-bottom) + 8px);
     }
+
 
     .stream-card {
       position: absolute;
