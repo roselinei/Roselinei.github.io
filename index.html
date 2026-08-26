@@ -352,7 +352,7 @@
         card.href = item.link;
         card.className = cardClass;
         card.style.left = targetX + 'px';
-        card.style.top = `calc(${finalLane} * var(--lane-h) + env(safe-area-inset-top))`; 
+        card.style.top = `calc(${finalLane} * var(--lane-h) + env(safe-area-inset-top) + 45px)`;
 
         card.innerHTML = `
           <div class="thumb-container">
