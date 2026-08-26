@@ -56,13 +56,11 @@
 
     .hour-box {
       position: absolute; top: 0; bottom: 0;
-      /*border-left: 1px solid rgba(255, 255, 255, 0.12);*/
       z-index: 0; 
       pointer-events: none;
       box-sizing: border-box; 
     }
 
-    /* --- 新增的彈性防撞容器 --- */
     .time-col {
       position: absolute;
       left: 0;
@@ -70,8 +68,8 @@
       bottom: 0;
       display: flex;
       flex-direction: column;
-      align-items: center; /* 讓文字和線條水平對齊 */
-      transform: translateX(-50%); /* 往左移一半，讓線條精準踩在軌道邊緣 */
+      align-items: center; 
+      transform: translateX(-50%); 
       pointer-events: none;
       z-index: 1;
     }
@@ -83,24 +81,21 @@
       line-height: 1;
     }
 
-    /* 文字的上下距離，只負責推開螢幕邊緣 */
     .time-col .hour-text.top {
       margin-top: calc(env(safe-area-inset-top) + 8px);
     }
     .time-col .hour-text.bottom {
-      margin-bottom: calc(8px);
+      margin-bottom: calc(env(safe-area-inset-bottom) + 8px);
     }
 
-    /* 魔法發生的地方：flex-grow 會自動吃掉所有「不會撞到文字」的剩餘空間 */
     .time-col .hour-line {
       width: 1px;
       flex-grow: 1; 
       background-color: rgba(255, 255, 255, 0.12);
-      margin-top: 6px; /* 與上方文字的安全距離 */
-      margin-bottom: 6px; /* 與下方文字的安全距離 */
+      margin-top: 6px; 
+      margin-bottom: 6px; 
     }
 
-    /* 時間帶拓寬發光時，把線條變透明（但保留物理空間） */
     .hour-box.expanded .time-col .hour-line {
       background-color: transparent; 
     }
@@ -234,6 +229,8 @@
         container.innerHTML = '<div style="padding: 20px;">目前沒有直播預定</div>';
         return;
       }
+
+      // 1. 強制按時間先後排序 (非常重要，避免資料交錯導致時空錯亂)
       data.sort((a, b) => a.startTime - b.startTime);
 
       const hourPx = 280; 
@@ -241,63 +238,70 @@
       const maxTime = Math.max(...data.map(item => item.startTime));
       const totalHours = Math.ceil((maxTime - startHour) / 3600000) + 4; 
       
-const cardW_px = 260; 
+      const cardW_px = 260; 
 
       // ==========================================
-      // 🔍 第一階段：模擬排版 (抓出真正擁擠的時間帶)
+      // 🔍 動態迭代模擬排版 (會自我修正的完美防撞機制)
       // ==========================================
-      const expandHour = new Array(totalHours).fill(false);
-      const simHourX = new Array(totalHours + 1).fill(0);
-      for(let i=0; i<=totalHours; i++) simHourX[i] = i * hourPx; 
+      let needsRecalculation = true;
+      let hourW = new Array(totalHours).fill(hourPx);
+      let hourX = new Array(totalHours + 1).fill(0);
 
-      let simLaneEnds = new Array(8).fill(0);
+      while (needsRecalculation) {
+        needsRecalculation = false;
+        
+        // 每次重新模擬前，根據最新的 hourW 重算每個小時的起點
+        hourX[0] = 0;
+        for(let i=0; i<totalHours; i++) {
+          hourX[i+1] = hourX[i] + hourW[i];
+        }
 
-      data.forEach(item => {
-        let hIdx = Math.floor((item.startTime - startHour) / 3600000);
-        let fraction = ((item.startTime - startHour) % 3600000) / 3600000;
-        let targetX = (hIdx >= 0 && hIdx < totalHours) ? simHourX[hIdx] + fraction * hourPx : simHourX[totalHours];
+        let simLaneEnds = new Array(8).fill(0);
 
-        let finalLane = -1;
-        let minWaitX = Infinity;
-        let bestLane = 0;
+        for (let i = 0; i < data.length; i++) {
+          let item = data[i];
+          let hIdx = Math.floor((item.startTime - startHour) / 3600000);
+          let fraction = ((item.startTime - startHour) % 3600000) / 3600000;
+          
+          let targetX = (hIdx >= 0 && hIdx < totalHours) ? hourX[hIdx] + fraction * hourW[hIdx] : hourX[totalHours];
 
-        for(let j=0; j<8; j++) {
-          // 修復：改為 >=，避免邊界 0 >= 0 被誤判為無空位
-          if (targetX >= simLaneEnds[j]) {
-            finalLane = j;
-            break;
+          let finalLane = -1;
+          let minWaitX = Infinity;
+          let bestLane = 0;
+
+          for(let j=0; j<8; j++) {
+            if (targetX >= simLaneEnds[j]) {
+              finalLane = j;
+              break;
+            }
+            if (simLaneEnds[j] < minWaitX) {
+              minWaitX = simLaneEnds[j];
+              bestLane = j;
+            }
           }
-          if (simLaneEnds[j] < minWaitX) {
-            minWaitX = simLaneEnds[j];
-            bestLane = j;
+
+          // 核心修正：發現真的塞車時，如果該小時還沒變寬，就立刻變寬並「從頭重新模擬」
+          if (finalLane === 7 || finalLane === -1) {
+            if (hIdx >= 0 && hIdx < totalHours) {
+              if (hourW[hIdx] === hourPx) {
+                hourW[hIdx] = hourPx * 2;
+                needsRecalculation = true;
+                break; // 打斷迴圈，帶著新寬度重新排版！
+              }
+            }
           }
-        }
 
-        if (finalLane === 7 || finalLane === -1) {
-          if (hIdx >= 0 && hIdx < totalHours) {
-             expandHour[hIdx] = true;
+          if (finalLane === -1) {
+            finalLane = bestLane;
+            targetX = minWaitX + 15; 
           }
+          simLaneEnds[finalLane] = targetX + cardW_px + 10; 
         }
-
-        if (finalLane === -1) {
-          finalLane = bestLane;
-          targetX = minWaitX + 15; 
-        }
-        simLaneEnds[finalLane] = targetX + cardW_px + 10; 
-      });
-
-      // ==========================================
-      // 📐 第二階段：正式建立時間帶寬度與座標
-      // ==========================================
-      const hourX = new Array(totalHours + 1).fill(0);
-      const hourW = new Array(totalHours).fill(hourPx);
-      for(let i=0; i<totalHours; i++) {
-        if (expandHour[i]) {
-          hourW[i] = hourPx * 2; 
-        }
-        hourX[i+1] = hourX[i] + hourW[i];
       }
 
+      // ==========================================
+      // 📐 正式建立時間帶寬度與背景
+      // ==========================================
       container.style.width = (hourX[totalHours] + 20) + 'px';
 
       const dHead = document.createElement('div');
@@ -312,7 +316,7 @@ const cardW_px = 260;
         box.style.left = hourX[i] + 'px';
         box.style.width = hourW[i] + 'px';
 
-        if (expandHour[i]) {
+        if (hourW[i] > hourPx) {
             box.classList.add('expanded');
         }
 
@@ -325,6 +329,7 @@ const cardW_px = 260;
         `;
         container.appendChild(box);
       }
+      
       const lastLine = document.createElement('div');
       lastLine.className = 'hour-box';
       lastLine.style.left = hourX[totalHours] + 'px';
@@ -335,9 +340,10 @@ const cardW_px = 260;
           <span class="hour-text bottom">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
         </div>
       `;
+      container.appendChild(lastLine);
 
       // ==========================================
-      // 🎨 第三階段：正式畫出卡片
+      // 🎨 正式畫出完美對齊的卡片
       // ==========================================
       let laneLastEnds = new Array(8).fill(0);
 
