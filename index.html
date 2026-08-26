@@ -56,10 +56,27 @@
 
     .hour-box {
       position: absolute; top: 0; bottom: 0;
-      border-left: 1px solid rgba(255, 255, 255, 0.12);
+      /*border-left: 1px solid rgba(255, 255, 255, 0.12);*/
       z-index: 0; 
       pointer-events: none;
       box-sizing: border-box; 
+    }
+
+    /* 畫出一條上下懸空，避開文字的縱線 */
+    .hour-box::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      width: 1px;
+      /* 線條從頂部文字下方才開始，到底部文字上方就結束 */
+      top: calc(env(safe-area-inset-top) + 26px); 
+      bottom: calc(env(safe-area-inset-bottom) + 26px);
+      background-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* 當時間帶發光擴張時，把這條實體線隱藏起來 */
+    .hour-box.expanded::before {
+      display: none;
     }
 
     .hour-box.expanded {
@@ -80,12 +97,6 @@
       font-size: 11px; color: rgba(255,255,255,0.4);
       white-space: nowrap;
       line-height: 1; 
-      
-      /* 👇 新增的魔法：用背景色蓋掉線條，並向上下推開 2px */
-      background-color: var(--bg-color);
-      padding: 2px 4px; /* 上下 2px，左右 4px 讓數字呼吸一下 */
-      z-index: 1; /* 確保文字浮在最上層 */
-      border-radius: 4px; /* (可選) 讓遮擋邊緣稍微圓潤一點點，看起來更自然 */
     }
 
     .hour-text.top {
