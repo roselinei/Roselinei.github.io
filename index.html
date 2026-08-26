@@ -62,23 +62,49 @@
       box-sizing: border-box; 
     }
 
-    /* 畫出一條上下懸空，避開文字的縱線 */
-    .hour-box::before {
-      content: "";
+    /* --- 新增的彈性防撞容器 --- */
+    .time-col {
       position: absolute;
       left: 0;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* 讓文字和線條水平對齊 */
+      transform: translateX(-50%); /* 往左移一半，讓線條精準踩在軌道邊緣 */
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .time-col .hour-text {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    /* 文字的上下距離，只負責推開螢幕邊緣 */
+    .time-col .hour-text.top {
+      margin-top: calc(env(safe-area-inset-top) + 8px);
+    }
+    .time-col .hour-text.bottom {
+      margin-bottom: calc(env(safe-area-inset-bottom) + 8px);
+    }
+
+    /* 魔法發生的地方：flex-grow 會自動吃掉所有「不會撞到文字」的剩餘空間 */
+    .time-col .hour-line {
       width: 1px;
-      /* 線條從頂部文字下方才開始，到底部文字上方就結束 */
-      top: calc(env(safe-area-inset-top) + 26px); 
-      bottom: calc(env(safe-area-inset-bottom) + 6px);
+      flex-grow: 1; 
       background-color: rgba(255, 255, 255, 0.12);
+      margin-top: 6px; /* 與上方文字的安全距離 */
+      margin-bottom: 6px; /* 與下方文字的安全距離 */
     }
 
-    /* 當時間帶發光擴張時，把這條實體線隱藏起來 */
-    .hour-box.expanded::before {
-      display: none;
+    /* 時間帶拓寬發光時，把線條變透明（但保留物理空間） */
+    .hour-box.expanded .time-col .hour-line {
+      background-color: transparent; 
     }
-
+    
     .hour-box.expanded {
       border: none;
       background: linear-gradient(to right, 
@@ -89,24 +115,6 @@
       );
       box-shadow: none; 
     }
-
-    .hour-text {
-      position: absolute; 
-      left: 0; 
-      transform: translateX(-50%);
-      font-size: 11px; color: rgba(255,255,255,0.4);
-      white-space: nowrap;
-      line-height: 1; 
-    }
-
-    .hour-text.top {
-      top: calc(env(safe-area-inset-top) + 8px); 
-    }
-
-    .hour-text.bottom {
-      bottom:  8px;
-    }
-
     .stream-card {
       position: absolute;
       width: var(--card-w); 
@@ -308,20 +316,22 @@ const cardW_px = 260;
         }
 
         box.innerHTML = `
-          <span class="hour-text top">${new Date(startHour + i*3600000).getHours()}:00</span>
-          <span class="hour-text bottom">${new Date(startHour + i*3600000).getHours()}:00</span>
+          <div class="time-col">
+            <span class="hour-text top">${new Date(startHour + i*3600000).getHours()}:00</span>
+            <div class="hour-line"></div>
+            <span class="hour-text bottom">${new Date(startHour + i*3600000).getHours()}:00</span>
+          </div>
         `;
         container.appendChild(box);
       }
       
-      const lastLine = document.createElement('div');
-      lastLine.className = 'hour-box';
-      lastLine.style.left = hourX[totalHours] + 'px';
       lastLine.innerHTML = `
-        <span class="hour-text top">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
-        <span class="hour-text bottom">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
+        <div class="time-col">
+          <span class="hour-text top">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
+          <div class="hour-line"></div>
+          <span class="hour-text bottom">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
+        </div>
       `;
-      container.appendChild(lastLine);
 
       // ==========================================
       // 🎨 第三階段：正式畫出卡片
