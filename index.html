@@ -63,7 +63,6 @@
 
     .time-col {
       position: absolute;
-      /* 改為依賴 inline style 的百分比定位 */
       top: 0;
       bottom: 0;
       display: flex;
@@ -96,7 +95,7 @@
       margin-bottom: 6px; 
     }
 
-    /* 新增：內部等分虛線的樣式 */
+    /* 虛線樣式 */
     .time-col .hour-line.dotted {
       background-color: transparent; 
       border-left: 1px dashed rgba(255, 255, 255, 0.3);
@@ -248,60 +247,27 @@
       const cardW_px = 260; 
 
       // ==========================================
-      // 🔍 動態迭代模擬排版 (無限等比拓寬機制)
+      // 🔍 幾何數學拓寬機制 (直接捨棄迴圈，零當機風險)
       // ==========================================
-      let needsRecalculation = true;
       let hourW = new Array(totalHours).fill(hourPx);
       let hourX = new Array(totalHours + 1).fill(0);
+      let cardsInHour = new Array(totalHours).fill(0);
 
-      while (needsRecalculation) {
-        needsRecalculation = false;
-        
-        hourX[0] = 0;
-        for(let i=0; i<totalHours; i++) {
-          hourX[i+1] = hourX[i] + hourW[i];
+      // 先統計每個小時有幾個直播
+      data.forEach(item => {
+        let hIdx = Math.floor((item.startTime - startHour) / 3600000);
+        if (hIdx >= 0 && hIdx < totalHours) {
+           cardsInHour[hIdx]++;
         }
+      });
 
-        let simLaneEnds = new Array(8).fill(0);
-
-        for (let i = 0; i < data.length; i++) {
-          let item = data[i];
-          let hIdx = Math.floor((item.startTime - startHour) / 3600000);
-          let fraction = ((item.startTime - startHour) % 3600000) / 3600000;
-          
-          let targetX = (hIdx >= 0 && hIdx < totalHours) ? hourX[hIdx] + fraction * hourW[hIdx] : hourX[totalHours];
-
-          let finalLane = -1;
-          let minWaitX = Infinity;
-          let bestLane = 0;
-
-          for(let j=0; j<8; j++) {
-            // 修復判定：必須是 >=，避免精準壓線時誤判為相撞
-            if (targetX >= simLaneEnds[j]) { 
-              finalLane = j;
-              break;
-            }
-            if (simLaneEnds[j] < minWaitX) {
-              minWaitX = simLaneEnds[j];
-              bestLane = j;
-            }
-          }
-
-          // 核心修正：只有在 8 軌全滿被擠到外面 (-1) 時，才觸發無限累加拓寬
-          if (finalLane === -1) {
-            if (hIdx >= 0 && hIdx < totalHours) {
-              hourW[hIdx] += hourPx; // 疊加一小時寬度 (2倍 -> 3倍 -> 4倍...)
-              needsRecalculation = true;
-              break; 
-            }
-          }
-
-          if (finalLane === -1) {
-            finalLane = bestLane;
-            targetX = minWaitX + 15; 
-          }
-          simLaneEnds[finalLane] = targetX + cardW_px + 10; 
+      // 依照數量決定倍數 (超過 8 個就拓寬，每多 8 個增加一倍)
+      for (let i = 0; i < totalHours; i++) {
+        if (cardsInHour[i] > 8) {
+            const multiplier = Math.ceil(cardsInHour[i] / 8);
+            hourW[i] = hourPx * multiplier;
         }
+        hourX[i+1] = hourX[i] + hourW[i];
       }
 
       // ==========================================
@@ -325,7 +291,6 @@
             box.classList.add('expanded');
         }
 
-        // 計算目前這個小時是幾倍寬度
         const multiplier = Math.round(hourW[i] / hourPx);
         let innerHTML = '';
 
@@ -385,7 +350,6 @@
         let bestLane = 0;
 
         for(let j=0; j<8; j++) {
-          // 修復判定：正式畫卡片時也必須是 >=
           if (targetX >= laneLastEnds[j]) {
             finalLane = j;
             break;
