@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#2A4B71">
-  <title>にじカレ+α</title>
+  <title>tst</title>
   <style>
     :root {
       --bg-color: #2A4B71;
@@ -85,7 +85,7 @@
     }
 
     .hour-text.bottom {
-      bottom: 8px;
+      bottom: calc(env(safe-area-inset-bottom) + 8px);
     }
 
     .stream-card {
@@ -352,7 +352,7 @@
         card.href = item.link;
         card.className = cardClass;
         card.style.left = targetX + 'px';
-        card.style.top = `calc(${finalLane} * var(--lane-h) + env(safe-area-inset-top) + 45px)`;
+        card.style.top = `calc(${finalLane} * var(--lane-h) + env(safe-area-inset-top) + 45px)`; 
 
         card.innerHTML = `
           <div class="thumb-container">
