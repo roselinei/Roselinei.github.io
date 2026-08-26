@@ -10,7 +10,7 @@
   <style>
     :root {
       --bg-color: #2A4B71;
-      --card-w: 68vw; 
+      --card-w: 260px; 
       /* 高度扣除額增加到 60px，為頂部時間和底部時間讓出空間，同時稍微壓縮八軌讓它們順著往下 */
       --lane-h: calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 60px) / 8); 
       --accent: #70a1ff;
@@ -280,7 +280,7 @@
       container.appendChild(lastLine);
 
       let laneLastEnds = new Array(8).fill(0);
-      const cardW_px = window.innerWidth * 0.68;
+      const cardW_px = 260;
 
       data.forEach(item => {
         let hIdx = Math.floor((item.startTime - startHour) / 3600000);
