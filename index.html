@@ -324,7 +324,9 @@ const cardW_px = 260;
         `;
         container.appendChild(box);
       }
-      
+      const lastLine = document.createElement('div');
+      lastLine.className = 'hour-box';
+      lastLine.style.left = hourX[totalHours] + 'px';
       lastLine.innerHTML = `
         <div class="time-col">
           <span class="hour-text top">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
