@@ -213,14 +213,14 @@
       const maxTime = Math.max(...data.map(item => item.startTime));
       const totalHours = Math.ceil((maxTime - startHour) / 3600000) + 4; 
       
-      const cardW_px = 260; // 💡 提前宣告卡片寬度，讓模擬運算可以使用
+const cardW_px = 260; 
 
       // ==========================================
       // 🔍 第一階段：模擬排版 (抓出真正擁擠的時間帶)
       // ==========================================
       const expandHour = new Array(totalHours).fill(false);
       const simHourX = new Array(totalHours + 1).fill(0);
-      for(let i=0; i<=totalHours; i++) simHourX[i] = i * hourPx; // 先假裝大家都沒拓寬
+      for(let i=0; i<=totalHours; i++) simHourX[i] = i * hourPx; 
 
       let simLaneEnds = new Array(8).fill(0);
 
@@ -234,7 +234,8 @@
         let bestLane = 0;
 
         for(let j=0; j<8; j++) {
-          if (targetX > simLaneEnds[j]) {
+          // 修復：改為 >=，避免邊界 0 >= 0 被誤判為無空位
+          if (targetX >= simLaneEnds[j]) {
             finalLane = j;
             break;
           }
@@ -244,10 +245,9 @@
           }
         }
 
-        // 🎯 核心判斷：如果被擠到第8軌 (index 7) 或是 8 軌全滿被往後推 (finalLane === -1)
         if (finalLane === 7 || finalLane === -1) {
           if (hIdx >= 0 && hIdx < totalHours) {
-             expandHour[hIdx] = true; // 標記這個時間帶需要擴張！
+             expandHour[hIdx] = true;
           }
         }
 
@@ -265,7 +265,7 @@
       const hourW = new Array(totalHours).fill(hourPx);
       for(let i=0; i<totalHours; i++) {
         if (expandHour[i]) {
-          hourW[i] = hourPx * 2; // 被模擬器標記的時間帶，正式擴張兩倍寬度
+          hourW[i] = hourPx * 2; 
         }
         hourX[i+1] = hourX[i] + hourW[i];
       }
