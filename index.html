@@ -63,7 +63,7 @@
 
     .time-col {
       position: absolute;
-      left: 0;
+      /* 改為依賴 inline style 的百分比定位 */
       top: 0;
       bottom: 0;
       display: flex;
@@ -85,7 +85,7 @@
       margin-top: calc(env(safe-area-inset-top) + 8px);
     }
     .time-col .hour-text.bottom {
-      margin-bottom: calc( 8px);
+      margin-bottom: calc(env(safe-area-inset-bottom) + 8px);
     }
 
     .time-col .hour-line {
@@ -96,7 +96,14 @@
       margin-bottom: 6px; 
     }
 
-    .hour-box.expanded .time-col .hour-line {
+    /* 新增：內部等分虛線的樣式 */
+    .time-col .hour-line.dotted {
+      background-color: transparent; 
+      border-left: 1px dashed rgba(255, 255, 255, 0.3);
+    }
+
+    /* 拓寬時隱藏整點實線背景 */
+    .hour-box.expanded .time-col .hour-line:not(.dotted) {
       background-color: transparent; 
     }
     
@@ -110,6 +117,7 @@
       );
       box-shadow: none; 
     }
+    
     .stream-card {
       position: absolute;
       width: var(--card-w); 
@@ -197,7 +205,7 @@
       text-decoration: none;
       pointer-events: auto; 
     }
-   </style>
+  </style>
 </head>
 <body>
   <div id="loading" class="loading">正在向 API 獲取 8 軌河道...</div>
@@ -230,7 +238,6 @@
         return;
       }
 
-      // 1. 強制按時間先後排序 (非常重要，避免資料交錯導致時空錯亂)
       data.sort((a, b) => a.startTime - b.startTime);
 
       const hourPx = 280; 
@@ -241,7 +248,7 @@
       const cardW_px = 260; 
 
       // ==========================================
-      // 🔍 動態迭代模擬排版 (會自我修正的完美防撞機制)
+      // 🔍 動態迭代模擬排版 (無限等比拓寬機制)
       // ==========================================
       let needsRecalculation = true;
       let hourW = new Array(totalHours).fill(hourPx);
@@ -250,7 +257,6 @@
       while (needsRecalculation) {
         needsRecalculation = false;
         
-        // 每次重新模擬前，根據最新的 hourW 重算每個小時的起點
         hourX[0] = 0;
         for(let i=0; i<totalHours; i++) {
           hourX[i+1] = hourX[i] + hourW[i];
@@ -270,7 +276,8 @@
           let bestLane = 0;
 
           for(let j=0; j<8; j++) {
-            if (targetX > simLaneEnds[j]) {
+            // 修復判定：必須是 >=，避免精準壓線時誤判為相撞
+            if (targetX >= simLaneEnds[j]) { 
               finalLane = j;
               break;
             }
@@ -280,14 +287,12 @@
             }
           }
 
-          // 核心修正：發現真的塞車時，如果該小時還沒變寬，就立刻變寬並「從頭重新模擬」
-          if (finalLane === 7 || finalLane === -1) {
+          // 核心修正：只有在 8 軌全滿被擠到外面 (-1) 時，才觸發無限累加拓寬
+          if (finalLane === -1) {
             if (hIdx >= 0 && hIdx < totalHours) {
-              if (hourW[hIdx] === hourPx) {
-                hourW[hIdx] = hourPx * 2;
-                needsRecalculation = true;
-                break; // 打斷迴圈，帶著新寬度重新排版！
-              }
+              hourW[hIdx] += hourPx; // 疊加一小時寬度 (2倍 -> 3倍 -> 4倍...)
+              needsRecalculation = true;
+              break; 
             }
           }
 
@@ -300,7 +305,7 @@
       }
 
       // ==========================================
-      // 📐 正式建立時間帶寬度與背景
+      // 📐 正式建立時間帶寬度與背景 (含虛線產生器)
       // ==========================================
       container.style.width = (hourX[totalHours] + 20) + 'px';
 
@@ -320,13 +325,30 @@
             box.classList.add('expanded');
         }
 
-        box.innerHTML = `
-          <div class="time-col">
-            <span class="hour-text top">${new Date(startHour + i*3600000).getHours()}:00</span>
-            <div class="hour-line"></div>
-            <span class="hour-text bottom">${new Date(startHour + i*3600000).getHours()}:00</span>
-          </div>
-        `;
+        // 計算目前這個小時是幾倍寬度
+        const multiplier = Math.round(hourW[i] / hourPx);
+        let innerHTML = '';
+
+        // 根據倍數，動態產生內部的等分標記與虛線
+        for (let k = 0; k < multiplier; k++) {
+          const markTime = new Date(startHour + i*3600000 + k * (3600000 / multiplier));
+          const hStr = markTime.getHours().toString().padStart(2, '0');
+          const mStr = markTime.getMinutes().toString().padStart(2, '0');
+          
+          const timeText = (k === 0) ? `${hStr}:00` : `${hStr}:${mStr}`;
+          const lineClass = (k === 0) ? 'hour-line' : 'hour-line dotted';
+          const leftPct = (k * 100) / multiplier; 
+
+          innerHTML += `
+            <div class="time-col" style="left: ${leftPct}%;">
+              <span class="hour-text top">${timeText}</span>
+              <div class="${lineClass}"></div>
+              <span class="hour-text bottom">${timeText}</span>
+            </div>
+          `;
+        }
+        
+        box.innerHTML = innerHTML;
         container.appendChild(box);
       }
       
@@ -334,7 +356,7 @@
       lastLine.className = 'hour-box';
       lastLine.style.left = hourX[totalHours] + 'px';
       lastLine.innerHTML = `
-        <div class="time-col">
+        <div class="time-col" style="left: 0%;">
           <span class="hour-text top">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
           <div class="hour-line"></div>
           <span class="hour-text bottom">${new Date(startHour + totalHours*3600000).getHours()}:00</span>
@@ -363,7 +385,8 @@
         let bestLane = 0;
 
         for(let j=0; j<8; j++) {
-          if (targetX > laneLastEnds[j]) {
+          // 修復判定：正式畫卡片時也必須是 >=
+          if (targetX >= laneLastEnds[j]) {
             finalLane = j;
             break;
           }
